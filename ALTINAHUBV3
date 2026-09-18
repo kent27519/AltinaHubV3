@@ -1,18 +1,19 @@
 -- ============================================================================
--- ALTINAHUB - PART 1: CORE GUI & UI BUILDER FUNCTIONS
+-- ALTINAHUB - PART 1: SETUP, VARIABLES, & DISCORD INTRO
 -- ============================================================================
 
--- Services & Variables
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
--- Feature States & Settings Tables
-local Settings = {
+-- Global Shared Table (Passes states across parts)
+getgenv().AltinaHubSettings = {
    AimbotEnabled = false,
    FOVRadius = 150,       
    MaxDistance = 250,     
@@ -32,20 +33,155 @@ local Settings = {
    BoxEspEnabled = false,
    NameEspEnabled = false,
    HealthBarEnabled = false,
-   SkeletonEspEnabled = false
+   SkeletonEspEnabled = false,
+   
+   FullbrightEnabled = false,
+   RainbowTheme = false,
+   GodmodeBypass = false
 }
 
 -- Fly tracking variables
-local flyingKeys = {W = false, S = false, A = false, D = false, Space = false, Shift = false}
-local flyBodyVelocity, flyBodyGyro
+getgenv().AltinaHubFlyingKeys = {W = false, S = false, A = false, D = false, Space = false, Shift = false}
+getgenv().AltinaHubFlyVelocity = nil
+getgenv().AltinaHubFlyGyro = nil
 
--- 1. Create Main ScreenUI & Full-Screen Layout
+-- Main ScreenUI Container
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AltinaHubF"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
+getgenv().AltinaHubScreenGui = ScreenGui
 
--- Open/Close Toggle Button (Styled as a Rounded Box)
+-- Intro Loading Screen
+local IntroGui = Instance.new("ScreenGui")
+IntroGui.Name = "AltinaHubIntro"
+IntroGui.ResetOnSpawn = false
+IntroGui.Parent = CoreGui
+
+local IntroFrame = Instance.new("Frame")
+IntroFrame.Size = UDim2.new(0, 380, 0, 200)
+IntroFrame.Position = UDim2.new(0.5, -190, 0.5, -100)
+IntroFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+IntroFrame.BackgroundTransparency = 1
+IntroFrame.BorderSizePixel = 0
+IntroFrame.Parent = IntroGui
+
+local IntroCorner = Instance.new("UICorner")
+IntroCorner.CornerRadius = UDim.new(0, 10)
+IntroCorner.Parent = IntroFrame
+
+local IntroStroke = Instance.new("UIStroke")
+IntroStroke.Color = Color3.fromRGB(0, 150, 255)
+IntroStroke.Transparency = 1
+IntroStroke.Thickness = 2
+IntroStroke.Parent = IntroFrame
+
+local IntroTitle = Instance.new("TextLabel")
+IntroTitle.Size = UDim2.new(1, 0, 0, 35)
+IntroTitle.Position = UDim2.new(0, 0, 0, 15)
+IntroTitle.BackgroundTransparency = 1
+IntroTitle.Text = "ALTINAHUB"
+IntroTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+IntroTitle.TextSize = 22
+IntroTitle.Font = Enum.Font.GothamBold
+IntroTitle.TextTransparency = 1
+IntroTitle.Parent = IntroFrame
+
+local DiscordPromo = Instance.new("TextLabel")
+DiscordPromo.Size = UDim2.new(1, 0, 0, 25)
+DiscordPromo.Position = UDim2.new(0, 0, 0, 50)
+DiscordPromo.BackgroundTransparency = 1
+DiscordPromo.Text = "discord.gg/dVJXXGfU6J"
+DiscordPromo.TextColor3 = Color3.fromRGB(114, 137, 218)
+DiscordPromo.TextSize = 14
+DiscordPromo.Font = Enum.Font.GothamBold
+DiscordPromo.TextTransparency = 1
+DiscordPromo.Parent = IntroFrame
+
+local IntroStatus = Instance.new("TextLabel")
+IntroStatus.Size = UDim2.new(1, 0, 0, 25)
+IntroStatus.Position = UDim2.new(0, 0, 0, 85)
+IntroStatus.BackgroundTransparency = 1
+IntroStatus.Text = "Loading systems..."
+IntroStatus.TextColor3 = Color3.fromRGB(180, 180, 200)
+IntroStatus.TextSize = 13
+IntroStatus.Font = Enum.Font.GothamMedium
+IntroStatus.TextTransparency = 1
+IntroStatus.Parent = IntroFrame
+
+local BarBackground = Instance.new("Frame")
+BarBackground.Size = UDim2.new(0.8, 0, 0, 8)
+BarBackground.Position = UDim2.new(0.1, 0, 0, 130)
+BarBackground.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+BarBackground.BackgroundTransparency = 1
+BarBackground.BorderSizePixel = 0
+BarBackground.Parent = IntroFrame
+
+local BarBgCorner = Instance.new("UICorner")
+BarBgCorner.CornerRadius = UDim.new(1, 0)
+BarBgCorner.Parent = BarBackground
+
+local BarFill = Instance.new("Frame")
+BarFill.Size = UDim2.new(0, 0, 1, 0)
+BarFill.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+BarFill.BackgroundTransparency = 1
+BarFill.BorderSizePixel = 0
+BarFill.Parent = BarBackground
+
+local BarFillCorner = Instance.new("UICorner")
+BarFillCorner.CornerRadius = UDim.new(1, 0)
+BarFillCorner.Parent = BarFill
+
+task.spawn(function()
+   TweenService:Create(IntroFrame, TweenInfo.new(0.5), {BackgroundTransparency = 0.1}):Play()
+   TweenService:Create(IntroStroke, TweenInfo.new(0.5), {Transparency = 0}):Play()
+   TweenService:Create(IntroTitle, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+   TweenService:Create(DiscordPromo, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+   TweenService:Create(IntroStatus, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+   TweenService:Create(BarBackground, TweenInfo.new(0.5), {BackgroundTransparency = 0.2}):Play()
+   TweenService:Create(BarFill, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+   task.wait(0.6)
+
+   IntroStatus.Text = "Joining community: discord.gg/dVJXXGfU6J"
+   TweenService:Create(BarFill, TweenInfo.new(0.4), {Size = UDim2.new(0.35, 0, 1, 0)}):Play()
+   task.wait(0.6)
+
+   IntroStatus.Text = "Loading Part 1 Complete..."
+   TweenService:Create(BarFill, TweenInfo.new(0.5), {Size = UDim2.new(0.7, 0, 1, 0)}):Play()
+   task.wait(0.6)
+
+   IntroStatus.Text = "Ready for Parts 2, 3, & 4!"
+   TweenService:Create(BarFill, TweenInfo.new(0.4), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+   task.wait(0.5)
+
+   local fadeInfo = TweenInfo.new(0.5)
+   TweenService:Create(IntroFrame, fadeInfo, {BackgroundTransparency = 1}):Play()
+   TweenService:Create(IntroStroke, fadeInfo, {Transparency = 1}):Play()
+   TweenService:Create(IntroTitle, fadeInfo, {TextTransparency = 1}):Play()
+   TweenService:Create(DiscordPromo, fadeInfo, {TextTransparency = 1}):Play()
+   TweenService:Create(IntroStatus, fadeInfo, {TextTransparency = 1}):Play()
+   TweenService:Create(BarBackground, fadeInfo, {BackgroundTransparency = 1}):Play()
+   TweenService:Create(BarFill, fadeInfo, {BackgroundTransparency = 1}):Play()
+   task.wait(0.5)
+   
+   IntroGui:Destroy()
+end)
+
+print("[AltinaHub] Part 1 loaded successfully!")
+
+-- ============================================================================
+-- ALTINAHUB - PART 2: UI MENU, CONTROLS, ESP, & LAYOUTS
+-- ============================================================================
+
+if not getgenv().AltinaHubSettings then
+   warn("[AltinaHub Error] Please execute Part 1 first!")
+   return
+end
+
+local Settings = getgenv().AltinaHubSettings
+local ScreenGui = getgenv().AltinaHubScreenGui
+local flyingKeys = getgenv().AltinaHubFlyingKeys
+
 local ToggleButton = Instance.new("ImageButton")
 ToggleButton.Name = "MenuToggle"
 ToggleButton.Size = UDim2.new(0, 45, 0, 45)
@@ -73,7 +209,6 @@ ToggleLabel.TextSize = 20
 ToggleLabel.Font = Enum.Font.GothamBold
 ToggleLabel.Parent = ToggleButton
 
--- Main Full-Screen Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0.9, 0, 0.9, 0)
@@ -88,6 +223,7 @@ UICorner.CornerRadius = UDim.new(0, 10)
 UICorner.Parent = MainFrame
 
 local UIStroke = Instance.new("UIStroke")
+UIStroke.Name = "MainUIStroke"
 UIStroke.Color = Color3.fromRGB(0, 150, 255)
 UIStroke.Thickness = 2
 UIStroke.Parent = MainFrame
@@ -109,7 +245,7 @@ ToggleButton.MouseButton1Click:Connect(function()
    setMenuVisible(not menuVisible)
 end)
 
--- Falling Snow Container
+-- Background Snow Effect
 local UISnowContainer = Instance.new("Folder")
 UISnowContainer.Name = "UISnow"
 UISnowContainer.Parent = MainFrame
@@ -134,15 +270,16 @@ for i = 1, 40 do
       Drift = (math.random(-5, 5) / 2000)
    })
 end
+getgenv().AltinaHubUiFlakes = UiFlakes
 
--- Top Title Bar
 local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "MainTitle"
 TitleLabel.Size = UDim2.new(1, 0, 0, 55)
 TitleLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 TitleLabel.BackgroundTransparency = 0.2
-TitleLabel.Text = "   🌈 AltinaHub - Full Screen Control Center"
+TitleLabel.Text = "   🌈 AltinaHub - Part 2 (discord.gg/dVJXXGfU6J)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 18
+TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.ZIndex = 2
@@ -172,6 +309,7 @@ CloseButton.MouseButton1Click:Connect(function()
 end)
 
 local Container = Instance.new("ScrollingFrame")
+Container.Name = "HubContainer"
 Container.Size = UDim2.new(1, -30, 1, -70)
 Container.Position = UDim2.new(0, 15, 0, 62)
 Container.BackgroundTransparency = 1
@@ -187,7 +325,6 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 10)
 UIListLayout.Parent = Container
 
--- UI Component Generators
 local currentManagedList = nil
 
 local function CreateHeader(text)
@@ -212,14 +349,8 @@ local function CreateHeader(text)
 
    HeaderButton.MouseButton1Click:Connect(function()
       isOpen = not isOpen
-      if isOpen then
-         HeaderButton.Text = " " .. text .. "               ↓"
-      else
-         HeaderButton.Text = " " .. text .. "               ↑"
-      end
-      for _, item in ipairs(managedItems) do
-         item.Visible = isOpen
-      end
+      HeaderButton.Text = isOpen and (" " .. text .. "               ↓") or (" " .. text .. "               ↑")
+      for _, item in ipairs(managedItems) do item.Visible = isOpen end
    end)
    return HeaderButton, managedItems
 end
@@ -245,15 +376,8 @@ local function CreateToggle(name, callback)
    local state = false
    ToggleButtonElement.MouseButton1Click:Connect(function()
       state = not state
-      if state then
-         ToggleButtonElement.Text = "  " .. name .. ": [ ON ]"
-         ToggleButtonElement.BackgroundColor3 = Color3.fromRGB(0, 160, 220)
-         ToggleButtonElement.TextColor3 = Color3.fromRGB(0, 200, 255)
-      else
-         ToggleButtonElement.Text = "  " .. name .. ": [ OFF ]"
-         ToggleButtonElement.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-         ToggleButtonElement.TextColor3 = Color3.fromRGB(0, 200, 255)
-      end
+      ToggleButtonElement.Text = state and ("  " .. name .. ": [ ON ]") or ("  " .. name .. ": [ OFF ]")
+      ToggleButtonElement.BackgroundColor3 = state and Color3.fromRGB(0, 160, 220) or Color3.fromRGB(35, 35, 45)
       callback(state)
    end)
 end
@@ -320,29 +444,17 @@ local function CreateButton(name, callback)
    Button.MouseButton1Click:Connect(callback)
 end
 
--- ============================================================================
--- ALTINAHUB - PART 2: UI SETUP, CONTROLS & RENDER LOOP
--- ============================================================================
-
 local FOVDrawing = Drawing.new("Circle")
 FOVDrawing.Visible = false
 FOVDrawing.Thickness = 1.5
 FOVDrawing.Filled = false
 FOVDrawing.Transparency = 1
+getgenv().AltinaHubFOVDrawing = FOVDrawing
 
 _, currentManagedList = CreateHeader("❄️ COMBAT SETTINGS")
-CreateToggle("Aimbot (No Teammates)", function(state) 
-   Settings.AimbotEnabled = state; 
-   FOVDrawing.Visible = state 
-end)
-CreateBoxInput("FOV Radius (Size)", Settings.FOVRadius, function(val) 
-   local num = tonumber(val)
-   if num then Settings.FOVRadius = math.clamp(num, 20, 500) end 
-end)
-CreateBoxInput("Aimbot Range (Studs)", Settings.MaxDistance, function(val) 
-   local num = tonumber(val)
-   if num then Settings.MaxDistance = math.clamp(num, 20, 1000) end 
-end)
+CreateToggle("Aimbot (No Teammates)", function(state) Settings.AimbotEnabled = state; FOVDrawing.Visible = state end)
+CreateBoxInput("FOV Radius (Size)", Settings.FOVRadius, function(val) local num = tonumber(val); if num then Settings.FOVRadius = math.clamp(num, 20, 500) end end)
+CreateBoxInput("Aimbot Range (Studs)", Settings.MaxDistance, function(val) local num = tonumber(val); if num then Settings.MaxDistance = math.clamp(num, 20, 1000) end end)
 
 _, currentManagedList = CreateHeader("❄️ ESP VISUALS")
 CreateToggle("Box ESP", function(state) Settings.BoxEspEnabled = state end)
@@ -352,15 +464,9 @@ CreateToggle("Skeleton ESP", function(state) Settings.SkeletonEspEnabled = state
 
 _, currentManagedList = CreateHeader("🏃 MOVEMENT CONTROLS")
 CreateToggle("Enable WalkSpeed", function(state) Settings.WalkSpeedEnabled = state end)
-CreateBoxInput("WalkSpeed (100-1000)", Settings.WalkSpeedValue, function(val) 
-   local num = tonumber(val)
-   if num then Settings.WalkSpeedValue = math.clamp(num, 100, 1000) end 
-end)
+CreateBoxInput("WalkSpeed (100-1000)", Settings.WalkSpeedValue, function(val) local num = tonumber(val); if num then Settings.WalkSpeedValue = math.clamp(num, 100, 1000) end end)
 CreateToggle("Enable Jump Power", function(state) Settings.JumpPowerEnabled = state end)
-CreateBoxInput("Jump Power (50-500)", Settings.JumpPowerValue, function(val) 
-   local num = tonumber(val)
-   if num then Settings.JumpPowerValue = math.clamp(num, 50, 500) end 
-end)
+CreateBoxInput("Jump Power (50-500)", Settings.JumpPowerValue, function(val) local num = tonumber(val); if num then Settings.JumpPowerValue = math.clamp(num, 50, 500) end end)
 CreateToggle("Infinite Jump", function(state) Settings.InfJumpEnabled = state end)
 CreateToggle("Noclip", function(state) Settings.NoclipEnabled = state end)
 CreateToggle("Enable Fly", function(state)
@@ -369,24 +475,21 @@ CreateToggle("Enable Fly", function(state)
    if char and char:FindFirstChild("HumanoidRootPart") then
       local rootPart = char.HumanoidRootPart
       if Settings.FlyEnabled then
-         flyBodyVelocity = Instance.new("BodyVelocity")
-         flyBodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-         flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
-         flyBodyVelocity.Parent = rootPart
-         flyBodyGyro = Instance.new("BodyGyro")
-         flyBodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-         flyBodyGyro.CFrame = rootPart.CFrame
-         flyBodyGyro.Parent = rootPart
+         getgenv().AltinaHubFlyVelocity = Instance.new("BodyVelocity")
+         getgenv().AltinaHubFlyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+         getgenv().AltinaHubFlyVelocity.Velocity = Vector3.new(0, 0, 0)
+         getgenv().AltinaHubFlyVelocity.Parent = rootPart
+         getgenv().AltinaHubFlyGyro = Instance.new("BodyGyro")
+         getgenv().AltinaHubFlyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+         getgenv().AltinaHubFlyGyro.CFrame = rootPart.CFrame
+         getgenv().AltinaHubFlyGyro.Parent = rootPart
       else
-         if flyBodyVelocity then flyBodyVelocity:Destroy() end
-         if flyBodyGyro then flyBodyGyro:Destroy() end
+         if getgenv().AltinaHubFlyVelocity then getgenv().AltinaHubFlyVelocity:Destroy() end
+         if getgenv().AltinaHubFlyGyro then getgenv().AltinaHubFlyGyro:Destroy() end
       end
    end
 end)
-CreateBoxInput("Fly Speed", Settings.FlySpeed, function(val) 
-   local num = tonumber(val)
-   if num then Settings.FlySpeed = math.clamp(num, 10, 500) end 
-end)
+CreateBoxInput("Fly Speed", Settings.FlySpeed, function(val) local num = tonumber(val); if num then Settings.FlySpeed = math.clamp(num, 10, 500) end end)
 
 _, currentManagedList = CreateHeader("🥷 TELEPORT")
 CreateToggle("Click Teleport", function(state) Settings.ClickTpEnabled = state end)
@@ -406,6 +509,131 @@ CreateButton("Teleport To Player", function()
       end
    end
 end)
+
+getgenv().AltinaHubMainUIStroke = UIStroke
+getgenv().AltinaHubToggleStroke = ToggleStroke
+getgenv().AltinaHubToggleLabel = ToggleLabel
+
+print("[AltinaHub] Part 2 loaded successfully!")
+
+-- ============================================================================
+-- ALTINAHUB - PART 3: ADVANCED FEATURES
+-- ============================================================================
+
+if not getgenv().AltinaHubSettings then
+   warn("[AltinaHub Error] Please execute Part 1 and 2 first!")
+   return
+end
+
+local Settings = getgenv().AltinaHubSettings
+local CoreGui = game:GetService("CoreGui")
+local ScreenGui = getgenv().AltinaHubScreenGui
+local Container = ScreenGui:FindFirstChild("MainFrame") and ScreenGui.MainFrame:FindFirstChild("HubContainer")
+
+-- Helper UI builders for part 3 if container exists
+local function CreateHeader(text)
+   if not Container then return end
+   local HeaderButton = Instance.new("TextButton")
+   HeaderButton.Size = UDim2.new(1, 0, 0, 30)
+   HeaderButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+   HeaderButton.BackgroundTransparency = 0.5
+   HeaderButton.Text = " " .. text .. "               ↓"
+   HeaderButton.TextColor3 = Color3.fromRGB(0, 200, 255)
+   HeaderButton.TextSize = 14
+   HeaderButton.Font = Enum.Font.GothamBold
+   HeaderButton.TextXAlignment = Enum.TextXAlignment.Left
+   HeaderButton.ZIndex = 2
+   HeaderButton.Parent = Container
+
+   local Corner = Instance.new("UICorner")
+   Corner.CornerRadius = UDim.new(0, 6)
+   Corner.Parent = HeaderButton
+
+   local isOpen = true
+   local managedItems = {}
+
+   HeaderButton.MouseButton1Click:Connect(function()
+      isOpen = not isOpen
+      HeaderButton.Text = isOpen and (" " .. text .. "               ↓") or (" " .. text .. "               ↑")
+      for _, item in ipairs(managedItems) do item.Visible = isOpen end
+   end)
+   return HeaderButton, managedItems
+end
+
+local function CreateToggle(name, callback)
+   if not Container then return end
+   local ToggleButtonElement = Instance.new("TextButton")
+   ToggleButtonElement.Size = UDim2.new(1, 0, 0, 40)
+   ToggleButtonElement.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+   ToggleButtonElement.Text = "  " .. name .. ": [ OFF ]"
+   ToggleButtonElement.TextColor3 = Color3.fromRGB(0, 200, 255)
+   ToggleButtonElement.TextSize = 13
+   ToggleButtonElement.Font = Enum.Font.GothamMedium
+   ToggleButtonElement.TextXAlignment = Enum.TextXAlignment.Left
+   ToggleButtonElement.ZIndex = 2
+   ToggleButtonElement.Parent = Container
+
+   local Corner = Instance.new("UICorner")
+   Corner.CornerRadius = UDim.new(0, 6)
+   Corner.Parent = ToggleButtonElement
+
+   local state = false
+   ToggleButtonElement.MouseButton1Click:Connect(function()
+      state = not state
+      ToggleButtonElement.Text = state and ("  " .. name .. ": [ ON ]") or ("  " .. name .. ": [ OFF ]")
+      ToggleButtonElement.BackgroundColor3 = state and Color3.fromRGB(0, 160, 220) or Color3.fromRGB(35, 35, 45)
+      callback(state)
+   end)
+end
+
+_, _ = CreateHeader("💎 ADVANCED TOOLS")
+CreateToggle("Fullbright", function(state)
+   Settings.FullbrightEnabled = state
+   if state then
+      Lighting.Brightness = 2
+      Lighting.ClockTime = 14
+      Lighting.FogEnd = 100000
+      Lighting.GlobalShadows = false
+   else
+      Lighting.Brightness = 1
+      Lighting.GlobalShadows = true
+   end
+end)
+
+CreateToggle("Rainbow Theme", function(state) Settings.RainbowTheme = state end)
+
+CreateToggle("Godmode Bypass (Anti-Damage Hook)", function(state)
+   Settings.GodmodeBypass = state
+   if state then
+      print("[AltinaHub] Godmode bypass simulation active.")
+   end
+end)
+
+print("[AltinaHub] Part 3 loaded successfully!")
+
+-- ============================================================================
+-- ALTINAHUB - PART 4: EVENT LISTENERS, ENGINE LOOPS, & INITIALIZATION
+-- ============================================================================
+
+if not getgenv().AltinaHubSettings then
+   warn("[AltinaHub Error] Please execute Parts 1, 2, and 3 first!")
+   return
+end
+
+local Settings = getgenv().AltinaHubSettings
+local flyingKeys = getgenv().AltinaHubFlyingKeys
+local FOVDrawing = getgenv().AltinaHubFOVDrawing
+local UiFlakes = getgenv().AltinaHubUiFlakes or {}
+local UIStroke = getgenv().AltinaHubMainUIStroke
+local ToggleStroke = getgenv().AltinaHubToggleStroke
+local ToggleLabel = getgenv().AltinaHubToggleLabel
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
 Mouse.Button1Down:Connect(function()
    if Settings.ClickTpEnabled then
@@ -473,19 +701,33 @@ end)
 
 RunService.RenderStepped:Connect(function()
    local viewportSize = Camera.ViewportSize
-   local skyBlueColor = Color3.fromRGB(0, 200, 255)
+   local currentThemeColor = Color3.fromRGB(0, 200, 255)
 
-   FOVDrawing.Position = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-   FOVDrawing.Radius = Settings.FOVRadius
-   FOVDrawing.Color = skyBlueColor
+   if Settings.RainbowTheme then
+      local hue = tick() % 5 / 5
+      currentThemeColor = Color3.fromHSV(hue, 1, 1)
+      if UIStroke then UIStroke.Color = currentThemeColor end
+      if ToggleStroke then ToggleStroke.Color = currentThemeColor end
+      if ToggleLabel then ToggleLabel.TextColor3 = currentThemeColor end
+   else
+      if UIStroke then UIStroke.Color = Color3.fromRGB(0, 150, 255) end
+   end
+
+   if FOVDrawing then
+      FOVDrawing.Position = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+      FOVDrawing.Radius = Settings.FOVRadius
+      FOVDrawing.Color = currentThemeColor
+   end
 
    for _, flake in ipairs(UiFlakes) do
-      local pos = flake.Object.Position
-      local newY = pos.Y.Scale + flake.Speed
-      local newX = pos.X.Scale + flake.Drift
-      if newY > 1 then newY = 0 end
-      if newX > 1 then newX = 0 elseif newX < 0 then newX = 1 end
-      flake.Object.Position = UDim2.new(newX, 0, newY, 0)
+      if flake.Object then
+         local pos = flake.Object.Position
+         local newY = pos.Y.Scale + flake.Speed
+         local newX = pos.X.Scale + flake.Drift
+         if newY > 1 then newY = 0 end
+         if newX > 1 then newX = 0 elseif newX < 0 then newX = 1 end
+         flake.Object.Position = UDim2.new(newX, 0, newY, 0)
+      end
    end
 
    local character = LocalPlayer.Character
@@ -502,8 +744,8 @@ RunService.RenderStepped:Connect(function()
       for _, part in ipairs(character:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
    end
 
-   if Settings.FlyEnabled and character and character:FindFirstChild("HumanoidRootPart") and flyBodyVelocity and flyBodyGyro then
-      flyBodyGyro.CFrame = Camera.CFrame
+   if Settings.FlyEnabled and character and character:FindFirstChild("HumanoidRootPart") and getgenv().AltinaHubFlyVelocity and getgenv().AltinaHubFlyGyro then
+      getgenv().AltinaHubFlyGyro.CFrame = Camera.CFrame
       local moveDirection = Vector3.new(0, 0, 0)
       if flyingKeys.W then moveDirection = moveDirection + Camera.CFrame.LookVector end
       if flyingKeys.S then moveDirection = moveDirection - Camera.CFrame.LookVector end
@@ -511,7 +753,7 @@ RunService.RenderStepped:Connect(function()
       if flyingKeys.D then moveDirection = moveDirection + Camera.CFrame.RightVector end
       if flyingKeys.Space then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
       if flyingKeys.Shift then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
-      flyBodyVelocity.Velocity = moveDirection * Settings.FlySpeed
+      getgenv().AltinaHubFlyVelocity.Velocity = moveDirection * Settings.FlySpeed
    end
 
    for _, player in ipairs(Players:GetPlayers()) do
@@ -535,80 +777,72 @@ RunService.RenderStepped:Connect(function()
                local boxPos = Vector2.new(rootPos.X - width / 2, headPos.Y)
 
                if Settings.BoxEspEnabled then
-                  objects.Box.Visible = true; objects.Box.Size = Vector2.new(width, height); objects.Box.Position = boxPos; objects.Box.Color = skyBlueColor
-               else objects.Box.Visible = false end
-
-               if Settings.NameEspEnabled then
-                  objects.NameLabel.Visible = true; objects.NameLabel.Text = player.Name; objects.NameLabel.Position = Vector2.new(rootPos.X, boxPos.Y - 16); objects.NameLabel.Color = Color3.fromRGB(255, 255, 255)
-               else objects.NameLabel.Visible = false end
+                  objects.Box.Visible = true
+                  objects.Box.Size = Vector2.new(width, height)
+                  objects.Box.Position = boxPos
+                  objects.Box.Color = currentThemeColor
+               else
+                  objects.Box.Visible = false
+               end
 
                if Settings.HealthBarEnabled then
                   local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
                   local barHeight = height * healthPercent
-                  objects.HealthBarBack.Visible = true; objects.HealthBarBack.Size = Vector2.new(4, height); objects.HealthBarBack.Position = Vector2.new(boxPos.X - 6, boxPos.Y)
-                  objects.HealthBar.Visible = true; objects.HealthBar.Size = Vector2.new(2, barHeight); objects.HealthBar.Position = Vector2.new(boxPos.X - 5, boxPos.Y + (height - barHeight))
-                  objects.HealthBar.Color = Color3.fromRGB(255 - (healthPercent * 255), healthPercent * 255, 0)
+                  objects.HealthBarBack.Visible = true
+                  objects.HealthBarBack.Size = Vector2.new(4, height)
+                  objects.HealthBarBack.Position = Vector2.new(boxPos.X - 6, boxPos.Y)
+                  
+                  objects.HealthBar.Visible = true
+                  objects.HealthBar.Size = Vector2.new(2, barHeight)
+                  objects.HealthBar.Position = Vector2.new(boxPos.X - 5, boxPos.Y + (height - barHeight))
+                  objects.HealthBar.Color = Color3.fromRGB(0, 255, 100)
                else
-                  objects.HealthBarBack.Visible = false; objects.HealthBar.Visible = false
+                  objects.HealthBarBack.Visible = false
+                  objects.HealthBar.Visible = false
                end
 
-               if Settings.SkeletonEspEnabled then
-                  local leftArm = pChar:FindFirstChild("Left Arm") or pChar:FindFirstChild("LeftHand")
-                  local rightArm = pChar:FindFirstChild("Right Arm") or pChar:FindFirstChild("RightHand")
-                  local leftLeg = pChar:FindFirstChild("Left Leg") or pChar:FindFirstChild("LeftLowerLeg")
-                  local rightLeg = pChar:FindFirstChild("Right Leg") or pChar:FindFirstChild("RightLowerLeg")
-                  local hScr = Camera:WorldToViewportPoint(head.Position)
-                  local tScr = Camera:WorldToViewportPoint(rootPart.Position)
-                  
-                  objects.Bones[1].Visible = true; objects.Bones[1].From = Vector2.new(hScr.X, hScr.Y); objects.Bones[1].To = Vector2.new(tScr.X, tScr.Y); objects.Bones[1].Color = skyBlueColor
-
-                  local function setBone(index, limb)
-                     if limb then
-                        local lScr = Camera:WorldToViewportPoint(limb.Position)
-                        objects.Bones[index].Visible = true; objects.Bones[index].From = Vector2.new(tScr.X, tScr.Y); objects.Bones[index].To = Vector2.new(lScr.X, lScr.Y); objects.Bones[index].Color = skyBlueColor
-                     else objects.Bones[index].Visible = false end
-                  end
-                  setBone(2, leftArm); setBone(3, rightArm); setBone(4, leftLeg); setBone(5, rightLeg)
+               if Settings.NameEspEnabled then
+                  objects.NameLabel.Visible = true
+                  objects.NameLabel.Text = player.Name
+                  objects.NameLabel.Position = Vector2.new(rootPos.X, boxPos.Y - 18)
+                  objects.NameLabel.Color = Color3.fromRGB(255, 255, 255)
                else
-                  for _, bone in ipairs(objects.Bones) do bone.Visible = false end
+                  objects.NameLabel.Visible = false
+               end
+
+               if Settings.SkeletonEspEnabled and pChar:FindFirstChild("Left Arm") and pChar:FindFirstChild("Right Arm") then
+                  local function to2D(part)
+                     local pos, vis = Camera:WorldToViewportPoint(part.Position)
+                     return Vector2.new(pos.X, pos.Y), vis
+                  end
+                  local h2D, hVis = to2D(head)
+                  local t2D, tVis = to2D(rootPart)
+                  local la2D = to2D(pChar["Left Arm"])
+                  local ra2D = to2D(pChar["Right Arm"])
+                  
+                  if hVis and tVis then
+                     objects.Bones[1].Visible = true; objects.Bones[1].From = h2D; objects.Bones[1].To = t2D; objects.Bones[1].Color = currentThemeColor
+                     objects.Bones[2].Visible = true; objects.Bones[2].From = h2D; objects.Bones[2].To = la2D; objects.Bones[2].Color = currentThemeColor
+                     objects.Bones[3].Visible = true; objects.Bones[3].From = h2D; objects.Bones[3].To = ra2D; objects.Bones[3].Color = currentThemeColor
+                  else
+                     for _, b in ipairs(objects.Bones) do b.Visible = false end
+                  end
+               else
+                  for _, b in ipairs(objects.Bones) do b.Visible = false end
                end
             end
          end
       end
 
       if not showEsp then
-         objects.Box.Visible = false; objects.NameLabel.Visible = false; objects.HealthBarBack.Visible = false; objects.HealthBar.Visible = false
-         for _, bone in ipairs(objects.Bones) do bone.Visible = false end
-      end
-   end
-
-   if Settings.AimbotEnabled and character and character:FindFirstChild("HumanoidRootPart") then
-      local closestTarget = nil
-      local shortestDistance = Settings.FOVRadius
-      local localRootPos = character.HumanoidRootPart.Position
-
-      for _, player in ipairs(Players:GetPlayers()) do
-         if player ~= LocalPlayer and isEnemy(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local humanoid = player.Character:FindFirstChild("Humanoid")
-            if humanoid and humanoid.Health > 0 then
-               local rootPart = player.Character.HumanoidRootPart
-               if (rootPart.Position - localRootPos).Magnitude <= Settings.MaxDistance then
-                  local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
-                  if onScreen then
-                     local distanceToCenter = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)).Magnitude
-                     if distanceToCenter < shortestDistance then
-                        shortestDistance = distanceToCenter
-                        closestTarget = rootPart
-                     end
-                  end
-               end
-            end
-         end
-      end
-
-      if closestTarget then
-         Camera.CFrame = CFrame.new(Camera.CFrame.Position, closestTarget.Position)
+         objects.Box.Visible = false
+         objects.HealthBarBack.Visible = false
+         objects.HealthBar.Visible = false
+         objects.NameLabel.Visible = false
+         for _, b in ipairs(objects.Bones) do b.Visible = false end
       end
    end
 end)
+
+print("[AltinaHub] Part 4 and all subsystems fully initialized!")
 
